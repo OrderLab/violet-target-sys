@@ -7376,7 +7376,7 @@ void violet_make_mysql_options_symbolic()
     if (strncmp("performance_schema", var->name.str, strlen("performance_schema")) == 0)
       continue; // skip all the performance schema system variables
     if (is_config_in_targets(var->name.str)) {
-      violet_log("sys_var %s\n", var->name.str);
+      violet_log("found target sys_var %s\n", var->name.str);
       var->make_symbolic();
     }
   }
@@ -7605,6 +7605,7 @@ static int get_options(int *argc_ptr, char ***argv_ptr)
   const char* blacklist = "auto_increment_increment,auto_increment_offset,connect_timeout,expire_logs_days,interactive_timeout,key_cache_age_threshold,max_allowed_packet,slave_max_allowed_packet,old_passwords,secure_auth,rpl_recovery_rank,div_precision_increment,server_id,innodb_fast_shutdown,innodb_force_recovery,binlog_format";
   violet_init_args args = {blacklist, "violet_mysqld.log", "related_configuration.log", "mysqld_configurations.log"};
   violet_init(args);
+  violet_parse_config_targets();
   violet_make_mysql_options_symbolic();
   return 0;
 }
