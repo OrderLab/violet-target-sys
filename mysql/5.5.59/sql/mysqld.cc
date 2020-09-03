@@ -69,6 +69,8 @@
 #include "scheduler.h"
 #include "debug_sync.h"
 #include "sql_callback.h"
+#include "sys_vars_shared.h"
+#include "sys_vars.h"
 
 #ifdef WITH_PERFSCHEMA_STORAGE_ENGINE
 #include "../storage/perfschema/pfs_server.h"
@@ -96,6 +98,8 @@
 #ifdef HAVE_POLL_H
 #include <poll.h>
 #endif
+
+#include "violet_sys.h"
 
 #define mysqld_charset &my_charset_latin1
 
@@ -1543,6 +1547,7 @@ void clean_up(bool print_message)
   mysql_cond_broadcast(&COND_thread_count);
   mysql_mutex_unlock(&LOCK_thread_count);
   sys_var_end();
+  violet_done();
 
   /*
     The following lines may never be executed as the main thread may have
@@ -4132,6 +4137,16 @@ a file name for --log-bin-index option", opt_binlog_index_name);
     plugin_unlock(0, global_system_variables.table_plugin);
     global_system_variables.table_plugin= plugin;
   }
+
+  if (plugin[0]->system_vars != NULL) {
+    sys_var *var = plugin[0]->system_vars;
+    for (; !var->next; var = var->next) {
+      if(!var->can_make_symbolic())
+        continue;
+      var->log_configuration(violet_config_meta_file);
+    }
+  }
+  fprintf(violet_config_meta_file, "{\"innodb_flush_method\",\"srv_unix_file_flush_method\",-1,{}},\n");
 
   tc_log= (total_ha_2pc > 1 ? (opt_bin_log  ?
                                (TC_LOG *) &mysql_bin_log :
@@ -7352,6 +7367,58 @@ static void option_error_reporter(enum loglevel level, const char *format, ...)
 
 C_MODE_END
 
+void violet_make_mysql_options_symbolic();
+void violet_make_mysql_plugin_options_symbolic();
+
+void violet_make_mysql_options_symbolic() 
+{
+  for (sys_var *var=all_sys_vars.first; var; var= var->next) {
+    if (strncmp("performance_schema", var->name.str, strlen("performance_schema")) == 0)
+      continue; // skip all the performance schema system variables
+    if (is_config_in_targets(var->name.str)) {
+      violet_log("sys_var %s\n", var->name.str);
+      var->make_symbolic();
+    }
+  }
+}
+
+/**
+  There are two ways to get the plugin configs: 
+   1). Through the system_vars field in struct st_mysql_plugin.
+   2). Through the system_vars field in the plugin handle (struct st_plugin_int)
+
+  Despite the same name, the types of them are different (mysqld made this clever 
+  but f**k complex!). 1) is how the plugin config originally gets defined
+  and stored. It has the original config struct st_mysql_sys_var*. We could
+  define a make_symbolic method for each such struct. But this is a bit messy.
+  Also, not all configs in 1) are visible to user (e.g., status_file).
+  For innodb, there are 67 configs in 1), 64 of them are user visible.
+
+  In comparison, 2) has all user visible configs. It also uses the sys_var type 
+  that we have supported previously. Therefore, we access the plugin configs 
+  through 2). What we need to do is adding a new method for this subclass of
+  sys_var (sys_var_pluginvar) to make the option symbolic based on the type 
+  flag. The new method is added in sql/sql_plugin.cc
+**/
+void violet_make_mysql_plugin_options_symbolic(struct st_plugin_int *plugin)
+{
+  if (plugin == NULL) {
+    violet_log("plugin is not initialized\n");
+    return;
+  }
+  if (plugin->system_vars != NULL) {
+    sys_var *var= plugin->system_vars;
+    for (;;) {
+      if (!var->next)
+        break;
+      if (is_config_in_targets(var->name.str)) {
+        var->make_symbolic();
+      }
+      var = var->next;
+    }
+  }
+}
+
 /**
   Get server options from the command line,
   and perform related server initializations.
@@ -7534,6 +7601,10 @@ static int get_options(int *argc_ptr, char ***argv_ptr)
   if (!max_long_data_size_used)
     max_long_data_size= global_system_variables.max_allowed_packet;
 
+  const char* blacklist = "auto_increment_increment,auto_increment_offset,connect_timeout,expire_logs_days,interactive_timeout,key_cache_age_threshold,max_allowed_packet,slave_max_allowed_packet,old_passwords,secure_auth,rpl_recovery_rank,div_precision_increment,server_id,innodb_fast_shutdown,innodb_force_recovery,binlog_format";
+  violet_init_args args = {blacklist, "violet_mysqld.log", "related_configuration.log", "mysqld_configurations.log"};
+  violet_init(args);
+  violet_make_mysql_options_symbolic();
   return 0;
 }
 

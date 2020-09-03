@@ -47,6 +47,8 @@ struct sys_var_chain
 int mysql_add_sys_var_chain(sys_var *chain);
 int mysql_del_sys_var_chain(sys_var *chain);
 
+extern "C" { void my_s2e_make_symbolic(void *buf, size_t size, const char *name); }
+
 /**
   A class representing one system variable - that is something
   that can be accessed as @@global.variable_name or @@session.variable_name,
@@ -92,7 +94,6 @@ public:
           longlong def_val, PolyLock *lock, enum binlog_status_enum binlog_status_arg,
           on_check_function on_check_func, on_update_function on_update_func,
           const char *substitute, int parse_flag);
-
   virtual ~sys_var() {}
 
   /**
@@ -158,7 +159,7 @@ private:
   virtual bool session_update(THD *thd, set_var *var) = 0;
   virtual bool global_update(THD *thd, set_var *var) = 0;
 
-protected:
+public:
   /**
     A pointer to a value of the variable for SHOW.
     It must be of show_val_type type (bool for SHOW_BOOL, int for SHOW_INT,
@@ -177,6 +178,14 @@ protected:
 
   uchar *global_var_ptr()
   { return ((uchar*)&global_system_variables) + offset; }
+
+  virtual bool can_make_symbolic() { return false; }
+  virtual bool make_symbolic() { return false; }
+  virtual void log_configuration(FILE* violet_configuration_file) 
+  { 
+    fprintf(violet_configuration_file, "{\"%s\",\"class.THD\",-1,{%d,%td}},\n", name.str, 14, offset);
+    fprintf(violet_configuration_file, "{\"%s\",\"struct.system_variables\",-1,{%td}},\n", name.str, offset);
+  }
 };
 
 #include "sql_plugin.h"                    /* SHOW_HA_ROWS, SHOW_MY_BOOL */

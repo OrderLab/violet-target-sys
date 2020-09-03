@@ -28,7 +28,7 @@
 #include "keycaches.h"
 #include "strfunc.h"
 #include "tztime.h"     // my_tz_find, my_tz_SYSTEM, struct Time_zone
-
+#include <s2e/s2e.h>
 /*
   a set of mostly trivial (as in f(X)=X) defines below to make system variable
   declarations more readable
@@ -72,6 +72,7 @@
 enum charset_enum {IN_SYSTEM_CHARSET, IN_FS_CHARSET};
 
 static const char *bool_values[3]= {"OFF", "ON", 0};
+
 
 /**
   A small wrapper class to pass getopt arguments as a pair
@@ -177,6 +178,15 @@ public:
   {
     return scope() == SESSION ? (T*)(((uchar*)&max_system_variables) + offset)
                               : 0;
+  }
+
+  bool can_make_symbolic() { return true; }
+  bool make_symbolic() 
+  {
+    my_s2e_make_symbolic(global_var_ptr(), sizeof(T), option.name);
+    s2e_assume((unsigned)(*global_var_ptr()) <= option.max_value);
+    s2e_assume((unsigned)(*global_var_ptr()) >= option.min_value);
+    return true;
   }
 };
 
@@ -296,6 +306,14 @@ public:
   { return (uchar*)typelib.type_names[session_var(thd, ulong)]; }
   uchar *global_value_ptr(THD *thd, LEX_STRING *base)
   { return (uchar*)typelib.type_names[global_var(ulong)]; }
+
+  bool can_make_symbolic() { return true; }
+  bool make_symbolic() 
+  {
+    my_s2e_make_symbolic(global_var_ptr(), sizeof(ulong), option.name);
+    s2e_assume((ulong)(*global_var_ptr()) <= typelib.count-1);
+    return true;
+  }
 };
 
 /**
@@ -341,6 +359,15 @@ public:
   { var->save_result.ulonglong_value= (ulonglong)*(my_bool *)global_value_ptr(thd, 0); }
   void global_save_default(THD *thd, set_var *var)
   { var->save_result.ulonglong_value= option.def_value; }
+
+  bool can_make_symbolic() { return true; }
+  bool make_symbolic() 
+  {
+    my_s2e_make_symbolic(global_var_ptr(), sizeof(my_bool), option.name);
+    s2e_assume((my_bool)(*global_var_ptr()) <= 1);
+    s2e_assume((my_bool)(*global_var_ptr()) >= 0);
+    return true;
+  }
 };
 
 /**
@@ -453,6 +480,19 @@ public:
   }
   bool check_update_type(Item_result type)
   { return type != STRING_RESULT; }
+  bool can_make_symbolic()
+  {
+    char *strval = *(char **) global_var_ptr();
+    return (strval != NULL && strlen(strval) != 0);
+  }
+  bool make_symbolic() 
+  {
+    char *strval = *(char **) global_var_ptr();
+    if (strval == NULL || strlen(strval) == 0)
+      return false;
+    my_s2e_make_symbolic(strval, strlen(strval), option.name);
+    return true;
+  }
 };
 
 
@@ -512,6 +552,7 @@ protected:
     return thd->security_ctx->proxy_user[0] ?
       (uchar *) &(thd->security_ctx->proxy_user[0]) : NULL;
   }
+  bool make_symbolic() { return false; }
 };
 
 /**
@@ -552,6 +593,15 @@ public:
       return true;
     global_var(LEX_STRING).length= var->save_result.string_value.length;
     return false;
+  }
+  bool can_make_symbolic() { return ((LEX_STRING *) global_var_ptr())->length != 0; }
+  bool make_symbolic() 
+  {
+    LEX_STRING *lsvalptr = (LEX_STRING *) global_var_ptr();
+    if (lsvalptr->length == 0)
+      return false;
+    my_s2e_make_symbolic(lsvalptr, lsvalptr->length, option.name);
+    return true;
   }
 };
 
@@ -714,6 +764,15 @@ public:
       key_cache= &zero_key_cache;
     return keycache_var_ptr(key_cache, offset);
   }
+  bool can_make_symbolic() { return true; }
+  bool make_symbolic() 
+  {
+    void *kcptr = global_value_ptr(NULL, NULL);
+    my_s2e_make_symbolic(kcptr, sizeof(ulonglong), option.name);
+    s2e_assume((ulonglong)(*global_var_ptr()) <= option.max_value);
+    s2e_assume((ulonglong)(*global_var_ptr()) >= (ulong)option.min_value);
+    return true;
+  }
 };
 
 /**
@@ -776,6 +835,14 @@ public:
   { var->save_result.double_value= global_var(double); }
   void global_save_default(THD *thd, set_var *var)
   { var->save_result.double_value= getopt_ulonglong2double(option.def_value); }
+  bool can_make_symbolic() { return true; }
+  bool make_symbolic() 
+  {
+    my_s2e_make_symbolic(global_var_ptr(), sizeof(double), option.name);
+    s2e_assume((double)(*global_var_ptr()) <= option.max_value);
+    s2e_assume((double)(*global_var_ptr()) >= (ulong)option.min_value);
+    return true;
+  }
 };
 
 /**
@@ -811,6 +878,14 @@ public:
     if (uc && uc->user_resources.user_conn)
       return (uchar*) &(uc->user_resources.user_conn);
     return global_value_ptr(thd, base);
+  }
+  bool can_make_symbolic() { return true; }
+  bool make_symbolic() 
+  {
+    my_s2e_make_symbolic(global_var_ptr(), sizeof(uint), option.name);
+    s2e_assume((uint)(*global_var_ptr()) <= option.max_value);
+    s2e_assume((uint)(*global_var_ptr()) >= option.min_value);
+    return true;
   }
 };
 
@@ -931,6 +1006,14 @@ public:
     return (uchar*)flagset_to_string(thd, 0, global_var(ulonglong),
                                      typelib.type_names);
   }
+  bool can_make_symbolic() { return true; }
+  bool make_symbolic() 
+  {
+    my_s2e_make_symbolic(global_var_ptr(), sizeof(ulonglong), option.name);
+    s2e_assume((ulonglong)(*global_var_ptr()) <= option.max_value);
+    s2e_assume((ulonglong)(*global_var_ptr()) >= (ulong)option.min_value);
+    return true;
+  }
 };
 
 /**
@@ -1031,6 +1114,14 @@ public:
   {
     return (uchar*)set_to_string(thd, 0, global_var(ulonglong),
                                  typelib.type_names);
+  }
+  bool can_make_symbolic() { return true; }
+  bool make_symbolic() 
+  {
+    my_s2e_make_symbolic(global_var_ptr(), sizeof(ulonglong), option.name);
+    s2e_assume((ulonglong)(*global_var_ptr()) <= option.max_value);
+    s2e_assume((ulonglong)(*global_var_ptr()) >= (ulong)option.min_value);
+    return true;
   }
 };
 
@@ -1304,6 +1395,25 @@ public:
     thd->sys_var_tmp.my_bool_value= reverse_semantics ^
       ((global_var(ulonglong) & bitmask) != 0);
     return (uchar*) &thd->sys_var_tmp.my_bool_value;
+  }
+  bool can_make_symbolic() { return true; }
+  bool make_symbolic() 
+  {
+    my_bool my_bool_value = reverse_semantics ^ ((global_var(ulonglong) & bitmask) != 0);
+    my_s2e_make_symbolic(&my_bool_value, sizeof(my_bool), option.name);
+    uchar *ptr = global_var_ptr();
+    if ((!reverse_semantics && my_bool_value) || (reverse_semantics && !my_bool_value))
+      (*(ulonglong *)ptr)|= bitmask;
+    else 
+      (*(ulonglong *)ptr)&= ~bitmask;
+    if (on_update) on_update(this, NULL, OPT_GLOBAL);
+    return true;
+  }
+  void log_configuration(FILE *violet_configuration_file)
+  {
+    fprintf(violet_configuration_file, "{\"%s\",\"class.THD\",%llu,{%d,%td}},\n", name.str, bitmask, 14, offset);
+    fprintf(violet_configuration_file, "{\"%s\",\"struct.system_variables\",%llu,{%td}},\n", name.str, bitmask, offset);
+    fflush(violet_configuration_file);
   }
 };
 

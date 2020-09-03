@@ -73,6 +73,8 @@ void flush_thread_cache();
 void refresh_status(THD *thd);
 bool is_secure_file_path(char *path);
 
+void violet_make_mysql_plugin_options_symbolic(struct st_plugin_int *plugin);
+
 extern "C" MYSQL_PLUGIN_IMPORT CHARSET_INFO *system_charset_info;
 extern MYSQL_PLUGIN_IMPORT CHARSET_INFO *files_charset_info ;
 extern MYSQL_PLUGIN_IMPORT CHARSET_INFO *national_charset_info;

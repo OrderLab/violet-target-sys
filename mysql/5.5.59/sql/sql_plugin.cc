@@ -34,6 +34,8 @@
 #include <mysql/plugin_auth.h>
 #include "lock.h"                               // MYSQL_LOCK_IGNORE_TIMEOUT
 #include "debug_sync.h"
+#include <mysqld.h>
+#include <s2e/s2e.h>
 #define REPORT_TO_LOG  1
 #define REPORT_TO_USER 2
 
@@ -248,6 +250,11 @@ public:
   virtual void global_save_default(THD *thd, set_var *var) {}
   bool session_update(THD *thd, set_var *var);
   bool global_update(THD *thd, set_var *var);
+
+  bool can_make_symbolic() { return value_size() != 0; }
+  bool make_symbolic();
+  void log_configuration(FILE* violet_configuration_file);
+  size_t value_size();
 };
 
 
@@ -1395,6 +1402,7 @@ int plugin_init(int *argc, char **argv, int flags)
   for (i= 0; i < plugin_array.elements; i++)
   {
     plugin_ptr= *dynamic_element(&plugin_array, i, struct st_plugin_int **);
+    violet_make_mysql_plugin_options_symbolic(plugin_ptr);
     if (plugin_ptr->state == PLUGIN_IS_UNINITIALIZED)
     {
       if (plugin_initialize(plugin_ptr))
@@ -3184,6 +3192,42 @@ bool sys_var_pluginvar::global_update(THD *thd, set_var *var)
     plugin_var->update(thd, plugin_var, tgt, src);
 
   return rc;
+}
+
+size_t sys_var_pluginvar::value_size()
+{
+  switch (plugin_var->flags & PLUGIN_VAR_TYPEMASK) {
+    case PLUGIN_VAR_BOOL: return sizeof(my_bool);
+    case PLUGIN_VAR_INT: return sizeof(int);
+    case PLUGIN_VAR_LONG: return sizeof(long);
+    case PLUGIN_VAR_ENUM: return sizeof(ulong);
+    case PLUGIN_VAR_LONGLONG:
+    case PLUGIN_VAR_SET: return sizeof(ulonglong);
+    case PLUGIN_VAR_STR: {
+      char **valptr= (char**) real_value_ptr(NULL, OPT_GLOBAL);
+      if (valptr == NULL || *valptr == NULL) return 0;
+      return strlen(*valptr);
+    }
+    case PLUGIN_VAR_DOUBLE: return sizeof(double);
+    default: return 0;
+  }
+}
+bool sys_var_pluginvar::make_symbolic() 
+{
+  size_t size = value_size();
+  if (size == 0) return false;
+  uchar *ptr = real_value_ptr(NULL, OPT_GLOBAL);
+  if ((plugin_var->flags & PLUGIN_VAR_TYPEMASK) == PLUGIN_VAR_STR) {
+    ptr = reinterpret_cast<uchar *>(*(char **) ptr);
+    if (ptr == NULL) return false;
+  }
+  my_s2e_make_symbolic(ptr, size, plugin_var->name);
+  return true;
+}
+void sys_var_pluginvar::log_configuration(FILE* violet_configuration_file)
+{
+  fprintf(violet_configuration_file, "{\"%s\",\"srv_%s\",-1,{}},\n", name.str,name.str+7);
+  fflush(violet_configuration_file);
 }
 
 
