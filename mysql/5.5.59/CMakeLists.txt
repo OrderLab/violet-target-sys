@@ -19,6 +19,29 @@ if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}" GREATER 2.6)
  CMAKE_POLICY(VERSION 2.8)
 endif()
 
+
+if(DEFINED ENV{S2EDIR})
+  MESSAGE(STATUS "S2EDIR is set to $ENV{S2EDIR}")
+  SET(S2ESRC "$ENV{S2EDIR}/source/s2e")
+  SET(S2ESRC_INCLUDE "${S2ESRC}/guest/common/include")
+  include_directories(${S2ESRC_INCLUDE})
+  SET(HAVE_VIOLET_S2E ON CACHE BOOL "Violet S2E test")
+else()
+  MESSAGE(WARNING "S2EDIR environment variable is not set, building MySQL without S2E.")
+endif()
+# Include Violet hook lib
+include_directories(../../hooks/lib)
+add_subdirectory(../../hooks violet)
+MESSAGE(STATUS "Violet library build path ${CMAKE_CURRENT_BINARY_DIR}/violet")
+SET(LIBVIOLET violet)
+link_directories(${CMAKE_CURRENT_BINARY_DIR}/violet/lib)
+
+#SET(CMAKE_C_FLAGS "-O0 -fpermissive")
+#SET(CMAKE_CXX_FLAGS "-O0 -fpermissive")
+#SET(CMAKE_C_FLAGS_RELEASE "-O0 -fpermissive")
+#SET(CMAKE_CXX_FLAGS_RELEASE "-O0 -fpermissive")
+
+
 # We use PROPERTIES LINK_INTERFACE_LIBRARIES. See cmake --help-policy CMP0022
 IF(CMAKE_VERSION VERSION_EQUAL "2.8.12" OR
    CMAKE_VERSION VERSION_GREATER "2.8.12")
@@ -220,11 +243,11 @@ IF (WITH_ASAN)
     # We switch on basic optimization also for debug builds.
     # With optimization we may get some warnings, so we switch off -Werror
     SET(CMAKE_C_FLAGS_DEBUG
-      "${CMAKE_C_FLAGS_DEBUG} -fsanitize=address -O1 -Wno-error -fPIC")
+      "${CMAKE_C_FLAGS_DEBUG} -fsanitize=address -O0 -Wno-error -fPIC")
     SET(CMAKE_C_FLAGS_RELWITHDEBINFO
       "${CMAKE_C_FLAGS_RELWITHDEBINFO} -fsanitize=address -fPIC")
     SET(CMAKE_CXX_FLAGS_DEBUG
-      "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address -O1 -Wno-error -fPIC")
+      "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address -O0 -Wno-error -fPIC")
     SET(CMAKE_CXX_FLAGS_RELWITHDEBINFO
       "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fsanitize=address -fPIC")
     SET(WITH_ASAN_OK 1)
@@ -236,11 +259,11 @@ IF (WITH_ASAN)
     IF(HAVE_C_FADDRESS AND HAVE_CXX_FFADDRESS)
       # We switch on basic optimization also for debug builds.
       SET(CMAKE_C_FLAGS_DEBUG
-        "${CMAKE_C_FLAGS_DEBUG} -faddress-sanitizer -O1 -fPIC")
+        "${CMAKE_C_FLAGS_DEBUG} -faddress-sanitizer -O0 -fPIC")
       SET(CMAKE_C_FLAGS_RELWITHDEBINFO
         "${CMAKE_C_FLAGS_RELWITHDEBINFO} -faddress-sanitizer -fPIC")
       SET(CMAKE_CXX_FLAGS_DEBUG
-        "${CMAKE_CXX_FLAGS_DEBUG} -faddress-sanitizer -O1 -fPIC")
+        "${CMAKE_CXX_FLAGS_DEBUG} -faddress-sanitizer -O0 -fPIC")
       SET(CMAKE_CXX_FLAGS_RELWITHDEBINFO
         "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -faddress-sanitizer -fPIC")
       SET(WITH_ASAN_OK 1)
@@ -253,8 +276,8 @@ IF (WITH_ASAN)
 ENDIF()
 
 # Always enable debug sync for debug builds.
-SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DENABLED_DEBUG_SYNC")
-SET(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DENABLED_DEBUG_SYNC")
+SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -DENABLED_DEBUG_SYNC")
+SET(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0 -DENABLED_DEBUG_SYNC")
  
 OPTION(ENABLE_GCOV "Enable gcov (debug, Linux builds only)" OFF)
 IF (ENABLE_GCOV AND NOT WIN32 AND NOT APPLE)
