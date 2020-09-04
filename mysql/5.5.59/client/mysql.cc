@@ -95,6 +95,11 @@ extern "C" {
   //int vidattr(long unsigned int attrs);	// Was missing in sun curses
 }
 
+#include <s2e/s2e.h>
+#include "cJSON.h"
+#include <stdio.h>
+#include <stdlib.h>
+
 #if !defined(HAVE_VIDATTR)
 #undef vidattr
 #define vidattr(A) {}			// Can't get this to work
@@ -216,6 +221,7 @@ static int com_quit(String *str,char*),
 	   com_rehash(String *str, char*), com_tee(String *str, char*),
            com_notee(String *str, char*), com_charset(String *str,char*),
            com_prompt(String *str, char*), com_delimiter(String *str, char*),
+     com_symbolic_queries(String *str, char*),
      com_warnings(String *str, char*), com_nowarnings(String *str, char*);
 
 #ifdef USE_POPEN
@@ -293,6 +299,7 @@ static COMMANDS commands[] = {
     "Set outfile [to_outfile]. Append everything into given outfile." },
   { "use",    'u', com_use,    1,
     "Use another database. Takes database name as argument." },
+  { "@@@",  's', com_symbolic_queries, 1, "Generate symbolic queries" },
   { "charset",    'C', com_charset,    1,
     "Switch to another charset. Might be needed for processing binlog with multi-byte charsets." },
   { "warnings", 'W', com_warnings,  0,
@@ -4312,6 +4319,38 @@ com_use(String *buffer __attribute__((unused)), char *line)
 
   put_info("Database changed",INFO_INFO);
   return 0;
+}
+
+#define MAX_NUM_QUERY 5000
+static int com_symbolic_queries(String *buffer __attribute__((unused)), char *line __attribute__((unused)))
+{
+  char packet[128];
+  MYSQL_RES *res;
+  char* token;
+  int num;
+  token = strtok(line," ");
+  token = strtok(NULL," ");
+  num = atoi(token);
+  if (!num)
+    num = MAX_NUM_QUERY;
+  for (int i=0;i<num;i++){
+    char temp[5];
+    strcpy(packet,"@@@-");
+    sprintf(temp,"%d",i);
+    strcat(packet,temp);
+    if (!mysql_query(&mysql, packet) &&
+        (res= mysql_use_result(&mysql)))
+    {
+      MYSQL_ROW row= mysql_fetch_row(res);
+      if (row && row[0])
+        current_db= my_strdup(row[0], MYF(MY_WME));
+      mysql_free_result(res);
+    }
+
+    if (!connected && reconnect())
+      return opt_reconnect ? -1 : 1;
+  }
+  return 1;
 }
 
 /**
