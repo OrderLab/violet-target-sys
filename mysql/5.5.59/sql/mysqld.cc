@@ -4140,7 +4140,8 @@ a file name for --log-bin-index option", opt_binlog_index_name);
 
   if (plugin[0]->system_vars != NULL) {
     sys_var *var = plugin[0]->system_vars;
-    for (; !var->next; var = var->next) {
+    printf("the var name is %s\n",var->name);
+    for (; var->next; var = var->next) {
       if(!var->can_make_symbolic())
         continue;
       var->log_configuration(violet_config_meta_file);
