@@ -979,10 +979,7 @@ bool do_command(THD *thd)
   DBUG_ASSERT(packet_length);
   test = 0;
   if (flag) {
-    s2e_printf("call LatencyTracker");
-    s2e_printf("Dispatch command %s\n", packet+1);
     s2e_invoke_plugin("LatencyTracker", &test, sizeof(test));
-    // s2e_invoke_plugin("LatencyTracker", packet, strlen(packet));
   }
   return_value= dispatch_command(command, thd, packet+1, (uint) (packet_length-1));
   test = 1;

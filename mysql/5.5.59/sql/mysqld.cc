@@ -7601,12 +7601,34 @@ static int get_options(int *argc_ptr, char ***argv_ptr)
   if (!max_long_data_size_used)
     max_long_data_size= global_system_variables.max_allowed_packet;
 
-  s2e_printf("I found a violet\n"); // test
+//  s2e_printf("I found a violet\n"); // test
   const char* blacklist = "auto_increment_increment,auto_increment_offset,connect_timeout,expire_logs_days,interactive_timeout,key_cache_age_threshold,max_allowed_packet,slave_max_allowed_packet,old_passwords,secure_auth,rpl_recovery_rank,div_precision_increment,server_id,innodb_fast_shutdown,innodb_force_recovery,binlog_format";
-  violet_init_args args = {blacklist, "violet_mysqld.log", "related_configuration.log", "mysqld_configurations.log"};
+  violet_init_args args = {blacklist, "violet_mysqld.log", "related_configuration.log", "configurations.log"};
   violet_init(args);
   violet_parse_config_targets();
   violet_make_mysql_options_symbolic();
+  for (sys_var *var=all_sys_vars.first; var; var= var->next) {
+    if (strncmp("performance_schema", var->name.str, strlen("performance_schema")) == 0) {
+      continue; // skip all the performance schema system variables
+    }
+
+    if(!var->can_make_symbolic()|| var->is_readonly())
+      continue;
+
+    switch (var->scope()) {
+      case sys_var::SESSION:
+        var->log_configuration(violet_config_meta_file);
+        break;
+      case sys_var::GLOBAL:
+        Dl_info info;
+        if (!dladdr(var->global_var_ptr(), &info)) {
+          continue;
+        }
+
+        fprintf (violet_config_meta_file,"{\"%s\",\"%s\",-1,{}},\n", var->name.str,info.dli_sname);
+        break;
+    }
+  }
   return 0;
 }
 

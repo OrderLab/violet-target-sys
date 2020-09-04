@@ -1411,9 +1411,14 @@ public:
   }
   void log_configuration(FILE *violet_configuration_file)
   {
-    fprintf(violet_configuration_file, "{\"%s\",\"class.THD\",%llu,{%d,%td}},\n", name.str, bitmask, 14, offset);
-    fprintf(violet_configuration_file, "{\"%s\",\"struct.system_variables\",%llu,{%td}},\n", name.str, bitmask, offset);
-    fflush(violet_configuration_file);
+      fprintf (violet_configuration_file,"{\"%s\",\"class.THD\",%llu,{%d,%d}},\n", name.str,bitmask,14,offset);
+      fprintf (violet_configuration_file,"{\"%s\",\"struct.system_variables\",%llu,{%d}},\n", name.str,bitmask,offset);
+      if (name.str == "autocommit") {
+        fprintf (violet_configuration_file,"{\"%s\",\"class.THD\",%llu,{%d,%d}},\n", name.str,OPTION_NOT_AUTOCOMMIT,14,offset);
+        fprintf (violet_configuration_file,"{\"%s\",\"struct.system_variables\",%llu,{%d}},\n", name.str,OPTION_NOT_AUTOCOMMIT,offset);
+      }
+      fflush(violet_configuration_file);
+
   }
 };
 

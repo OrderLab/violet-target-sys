@@ -20,12 +20,17 @@ if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}" GREATER 2.6)
 endif()
 
 
+
 if(DEFINED ENV{S2EDIR})
   MESSAGE(STATUS "S2EDIR is set to $ENV{S2EDIR}")
   SET(S2ESRC "$ENV{S2EDIR}/source/s2e")
   SET(S2ESRC_INCLUDE "${S2ESRC}/guest/common/include")
   include_directories(${S2ESRC_INCLUDE})
-  SET(HAVE_VIOLET_S2E ON CACHE BOOL "Violet S2E test")
+  if(DEFINED ENV{ISSYMBOLIC})
+    SET(HAVE_VIOLET_S2E "Violet S2E test")
+  else()
+    MESSAGE(STATUS "RUNNING MYSQL in no symbolic mode.")
+  endif()
 else()
   MESSAGE(WARNING "S2EDIR environment variable is not set, building MySQL without S2E.")
 endif()
