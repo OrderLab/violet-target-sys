@@ -28,7 +28,11 @@
 #include "keycaches.h"
 #include "strfunc.h"
 #include "tztime.h"     // my_tz_find, my_tz_SYSTEM, struct Time_zone
+#ifdef HAVE_VIOLET_S2E
 #include <s2e/s2e.h>
+#else
+#define s2e_assume(x)
+#endif
 /*
   a set of mostly trivial (as in f(X)=X) defines below to make system variable
   declarations more readable

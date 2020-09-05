@@ -35,7 +35,9 @@
 #include "lock.h"                               // MYSQL_LOCK_IGNORE_TIMEOUT
 #include "debug_sync.h"
 #include <mysqld.h>
+#ifdef HAVE_VIOLET_S2E
 #include <s2e/s2e.h>
+#endif
 #define REPORT_TO_LOG  1
 #define REPORT_TO_USER 2
 

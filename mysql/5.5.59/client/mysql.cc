@@ -95,7 +95,9 @@ extern "C" {
   //int vidattr(long unsigned int attrs);	// Was missing in sun curses
 }
 
+#ifdef HAVE_VIOLET_S2E
 #include <s2e/s2e.h>
+#endif
 #include "cJSON.h"
 #include <stdio.h>
 #include <stdlib.h>

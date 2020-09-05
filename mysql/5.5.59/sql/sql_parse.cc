@@ -98,7 +98,15 @@
 #include "probes_mysql.h"
 #include "set_var.h"
 
+#ifdef HAVE_VIOLET_S2E
 #include <s2e/s2e.h>
+#else
+#define s2e_printf(...)
+#define s2e_kill_state(...)
+#define s2e_make_symbolic(...)
+#define s2e_assume(...)
+#define s2e_invoke_plugin(...)
+#endif
 #include "cJSON.h"
 
 #define FLAGSTR(V,F) ((V)&(F)?#F" ":"")
@@ -704,7 +712,7 @@ char* get_packet_helper(cJSON* current_level) {
   if (size == 0) {
     s2e_kill_state(1, json_configuration_message);
   }
-  int index;
+  int index = 0;
   s2e_make_symbolic(&index, sizeof(int), "index");
   s2e_assume(index >= 0 && index < size);
   cJSON* option = cJSON_GetArrayItem(options, index);
