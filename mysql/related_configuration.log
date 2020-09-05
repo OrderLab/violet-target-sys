@@ -139,7 +139,7 @@
 { configuration: wait_timeout, prev configurations: []}
 { configuration: auto_increment_increment, succ configurations: []},
 { configuration: auto_increment_offset, succ configurations: []},
-{ configuration: autocommit, succ configurations: [innodb_flush_log_at_trx_commit]},
+{ configuration: autocommit, succ configurations: [innodb_flush_log_at_trx_commit,innodb_flush_method,]},
 { configuration: automatic_sp_privileges, succ configurations: []},
 { configuration: big_tables, succ configurations: []},
 { configuration: binlog_cache_size, succ configurations: []},
