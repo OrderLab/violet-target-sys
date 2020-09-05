@@ -9,19 +9,6 @@ fi
 mkdir -p {build,dist}
 cd build
 
-while getopts "s" arg
-do
-        case $arg in
-             s)
-				export ISSYMBOLIC=true 
-                ;;
-             ?)  
-                echo "unkonw argument"
-        exit 1
-        ;;
-        esac
-done
-
 
 cmake ../5.5.59  -DCMAKE_INSTALL_PREFIX=`pwd`/../dist \
   -DMYSQL_DATADIR=`pwd`/../dist/data -DWITH_DEBUG=1 -DCMAKE_BUILD_TYPE=DEBUG \
@@ -29,4 +16,3 @@ cmake ../5.5.59  -DCMAKE_INSTALL_PREFIX=`pwd`/../dist \
   -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DMYSQL_MAINTAINER_MODE=false
 
 make -j4
-unset ISSYMBOLIC

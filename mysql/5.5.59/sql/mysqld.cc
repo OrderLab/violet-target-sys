@@ -7602,8 +7602,7 @@ static int get_options(int *argc_ptr, char ***argv_ptr)
   if (!max_long_data_size_used)
     max_long_data_size= global_system_variables.max_allowed_packet;
 
-//  s2e_printf("I found a violet\n"); // test
-  const char* blacklist = "auto_increment_increment,auto_increment_offset,connect_timeout,expire_logs_days,interactive_timeout,key_cache_age_threshold,max_allowed_packet,slave_max_allowed_packet,old_passwords,secure_auth,rpl_recovery_rank,div_precision_increment,server_id,innodb_fast_shutdown,innodb_force_recovery,binlog_format";
+  const char* blacklist = "auto_increment_increment,auto_increment_offset,connect_timeout,expire_logs_days,interactive_timeout,key_cache_age_threshold,max_allowed_packet,slave_max_allowed_packet,old_passwords,secure_auth,rpl_recovery_rank,div_precision_increment,server_id,innodb_force_recovery";
   violet_init_args args = {blacklist, "violet_mysqld.log", "related_configuration.log", "configurations.log"};
   violet_init(args);
   violet_parse_config_targets();

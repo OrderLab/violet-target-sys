@@ -3224,65 +3224,10 @@ bool sys_var_pluginvar::make_symbolic()
   my_s2e_make_symbolic(ptr, size, plugin_var->name);
   return true;
 }
-void sys_var_pluginvar::log_configuration(FILE* violet_configuration_file) {
-  Dl_info info;
-  switch (plugin_var->flags & (PLUGIN_VAR_TYPEMASK | PLUGIN_VAR_THDLOCAL)) {
-    case PLUGIN_VAR_INT: {
-      if (!dladdr(((sysvar_uint_t *) plugin_var)->value, &info)) {
-        return;
-      }
-      break;
-    }
-    case PLUGIN_VAR_LONG: {
-      if (!dladdr(((sysvar_ulong_t *) plugin_var)->value, &info)) {
-        return;
-      }
-      break;
-    }
-    case PLUGIN_VAR_LONGLONG: {
-      if (!dladdr(((sysvar_ulonglong_t *) plugin_var)->value, &info)) {
-        return;
-      }
-      break;
-    }
-    case PLUGIN_VAR_ENUM: {
-      if (!dladdr(((sysvar_enum_t *) plugin_var)->value, &info)) {
-        return;
-      }
-      break;
-    }
-    case PLUGIN_VAR_SET: {
-      if (!dladdr(((sysvar_set_t *) plugin_var)->value, &info)) {
-        return;
-      }
-      break;
-    }
-    case PLUGIN_VAR_BOOL: {
-      if (!dladdr(((sysvar_bool_t *) plugin_var)->value, &info)) {
-        return;
-      }
-      break;
-    }
-    case PLUGIN_VAR_STR: {
-      if (!dladdr(((sysvar_str_t *) plugin_var)->value, &info)) {
-        return;
-      }
-      break;
-    }
-    case PLUGIN_VAR_DOUBLE: {
-      if (!dladdr(((sysvar_double_t *) plugin_var)->value, &info)) {
-        return;
-      }
-      break;
-    }
-    default:return;
-  }
-  if (info.dli_sname == NULL) {
-    printf("config %s\n", name.str);
-  } else {
-    fprintf(violet_configuration_file, "{\"%s\",\"%s\",-1,{}},\n", name.str, info.dli_sname);
-    fflush(violet_configuration_file);
-  }
+void sys_var_pluginvar::log_configuration(FILE* violet_configuration_file)
+{
+  fprintf(violet_configuration_file, "{\"%s\",\"srv_%s\",-1,{}},\n", name.str,name.str+7);
+  fflush(violet_configuration_file);
 }
 
 
