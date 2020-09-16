@@ -107,7 +107,8 @@
 #define s2e_assume(...)
 #define s2e_invoke_plugin(...)
 #endif
-#include "cJSON.h"
+
+#include <violet_sys.h>
 
 #define FLAGSTR(V,F) ((V)&(F)?#F" ":"")
 
@@ -673,174 +674,9 @@ void cleanup_items(Item *item)
 
 #define MAX_QUERY_TYPE 10
 
-const char *json = "{ \"options\":[\"select\",\"insert\",\"update\",\"delete\"],"
-                   "\"select\":{\"options\": [\"point\",\"range\"],"
-                   "\"point\":\"SELECT * FROM tbl WHERE id = 1\","
-                   "\"range\":{\"options\":[\"simple\",\"orderby\",\"sum\",\"distinct\"],"
-                   "\"simple\":\"SELECT * FROM tbl WHERE id BETWEEN 5 AND 10\","
-                   "\"orderby\":\"SELECT * FROM tbl WHERE id BETWEEN 5 AND 10 ORDER BY col\","
-                   "\"sum\":\"SELECT SUM(col) FROM tbl WHERE id BETWEEN 5 AND 10 ORDER BY col\","
-                   "\"distinct\":\"SELECT DISTINCT * FROM tbl WHERE id BETWEEN 5 AND 10 ORDER BY col\"}},"
-                   "\"insert\":\"INSERT INTO tbl(col) VALUES(10)\","
-                   "\"update\": {\"options\":[\"no_index\",\"index\"],"
-                   "\"no_index\":\"UPDATE tbl SET col=10 WHERE id=4\","
-                   "\"index\":\"UPDATE tbl SET col=col+1 WHERE id<300\"},"
-                   "\"delete\":\"DELETE FROM tbl WHERE id = 1\"}";
-const char * json_configuration_message = "Json Configuration is invalid.";
+const char *json = "{ \"options\":[\"select\",\"insert\",\"update\",\"delete\"],\"select\":{\"options\": [\"point\",\"range\"],\"point\":\"SELECT * FROM tbl WHERE id = 1\",\"range\":{\"options\":[\"simple\",\"orderby\",\"sum\",\"distinct\"],\"simple\":\"SELECT * FROM tbl WHERE id BETWEEN 5 AND 10\",\"orderby\":\"SELECT * FROM tbl WHERE id BETWEEN 5 AND 10 ORDER BY col\",\"sum\":\"SELECT SUM(col) FROM tbl WHERE id BETWEEN 5 AND 10 ORDER BY col\",\"distinct\":\"SELECT DISTINCT * FROM tbl WHERE id BETWEEN 5 AND 10 ORDER BY col\"}},\"insert\":\"INSERT INTO tbl(col) VALUES(10)\",\"update\": {\"options\":[\"no_index\",\"index\"],\"no_index\":\"UPDATE tbl SET col=10 WHERE id=4\",\"index\":\"UPDATE tbl SET col=col+1 WHERE id<300\"},\"delete\":\"DELETE FROM tbl WHERE id = 1\"}";
 
-const char *workload_json =  "{ \"options\":[\"read\",\"insert\",\"update\",\"write\"],"
-                             "\"read\":{\"options\": [\"range\",\"write\",\"only\",\"point\"],"
-                             "\"range\":[0,1],"
-                             "\"only\":[0],"
-                             "\"point\":[0,0]},"
-                             "\"insert\":[1],"
-                             "\"update\": {\"options\":[\"no_index\",\"index\"],"
-                             "\"no_index\":[2,0],"
-                             "\"index\": [2,1]},"
-                             "\"wrtie\":[2]}";
-
-
-char* get_packet_helper(cJSON* current_level) {
-  if (!cJSON_IsObject(current_level)) {
-    s2e_kill_state(1, json_configuration_message);
-  }
-  cJSON* options = cJSON_GetObjectItemCaseSensitive(current_level, "options");
-  if (!cJSON_IsArray(options)) {
-    s2e_kill_state(1, json_configuration_message);
-  }
-  int size = cJSON_GetArraySize(options);
-  if (size == 0) {
-    s2e_kill_state(1, json_configuration_message);
-  }
-  int index = 0;
-  s2e_make_symbolic(&index, sizeof(int), "index");
-  s2e_assume(index >= 0 && index < size);
-  cJSON* option = cJSON_GetArrayItem(options, index);
-  if (!cJSON_IsString(option)) {
-    s2e_kill_state(1, json_configuration_message);
-  }
-  char* option_string = option->valuestring;
-  cJSON* next_level = cJSON_GetObjectItemCaseSensitive(current_level, option_string);
-  if (cJSON_IsString(next_level)) {
-    return next_level->valuestring;
-  }
-
-  return get_packet_helper(next_level);
-}
-
-int get_packets_helper(cJSON* current_level, char* workloads[], int workload_options[],int level, int depth) {
-  cJSON* target_level = current_level;
-  cJSON* jsons[MAX_QUERY_TYPE];
-  int jsons_depth = 0;
-  int workloads_depth = 0;
-
-
-  while (level <= depth) {
-    if (!cJSON_IsObject(target_level)) {
-      s2e_kill_state(1, json_configuration_message);
-    }
-    cJSON* options = cJSON_GetObjectItemCaseSensitive(target_level, "options");
-    if (!cJSON_IsArray(options)) {
-      s2e_kill_state(1, json_configuration_message);
-    }
-    int size = cJSON_GetArraySize(options);
-    if (size == 0) {
-      s2e_kill_state(1, json_configuration_message);
-    }
-    cJSON* option = cJSON_GetArrayItem(options, workload_options[level]);
-    if (!cJSON_IsString(option)) {
-      s2e_kill_state(1, json_configuration_message);
-    }
-    char* option_string = option->valuestring;
-    target_level = cJSON_GetObjectItemCaseSensitive(target_level, option_string);
-    level++;
-    if (level > depth) {
-      jsons[jsons_depth] = target_level;
-      jsons_depth++;
-    }
-  }
-
-  while (jsons_depth > 0) {
-    cJSON* current_level = jsons[jsons_depth-1];
-    jsons_depth--;
-    if (cJSON_IsString(current_level)) {
-      (workloads)[workloads_depth] = current_level->valuestring;
-      workloads_depth++;
-      continue;
-    }
-    if (!cJSON_IsObject(current_level)) {
-      s2e_kill_state(1, json_configuration_message);
-    }
-    cJSON* options = cJSON_GetObjectItemCaseSensitive(current_level, "options");
-    if (!cJSON_IsArray(options)) {
-      s2e_kill_state(1, json_configuration_message);
-    }
-    int size = cJSON_GetArraySize(options);
-    if (size == 0) {
-      s2e_kill_state(1, json_configuration_message);
-    }
-    for (int i=0;i<size;i++) {
-      char* option_string = cJSON_GetArrayItem(options, i)->valuestring;
-      jsons[jsons_depth] = cJSON_GetObjectItemCaseSensitive(current_level, option_string);
-      jsons_depth++;
-    }
-  }
-  return workloads_depth;
-}
-
-int get_workload_helper(cJSON* current_level, int** workload_options) {
-  if (!cJSON_IsObject(current_level)) {
-    s2e_kill_state(1, json_configuration_message);
-  }
-  cJSON* options = cJSON_GetObjectItemCaseSensitive(current_level, "options");
-  if (!cJSON_IsArray(options)) {
-    s2e_kill_state(1, json_configuration_message);
-  }
-  int size = cJSON_GetArraySize(options);
-  if (size == 0) {
-    s2e_kill_state(1, json_configuration_message);
-  }
-  int index = 0;
-  s2e_make_symbolic(&index, sizeof(int), "index");
-  s2e_assume(index >= 0 && index < size);
-  cJSON* option = cJSON_GetArrayItem(options, index);
-  if (!cJSON_IsString(option)) {
-    s2e_kill_state(1, json_configuration_message);
-  }
-  char* option_string = option->valuestring;
-  cJSON* next_level = cJSON_GetObjectItemCaseSensitive(current_level, option_string);
-  if (cJSON_IsArray(next_level)) {
-    int array_size = cJSON_GetArraySize(next_level);
-    (*workload_options) = (int*) malloc(sizeof(int) * array_size);
-    for(int i=0 ; i < array_size ; i ++ ){
-      cJSON* pSub = cJSON_GetArrayItem(next_level, i);
-      if(NULL == pSub ){ continue ; }
-      int ivalue = pSub->valueint ;
-      (*workload_options)[i] = ivalue;
-    }
-    return array_size;
-  }
-  return get_workload_helper(next_level,workload_options);
-}
-
-int get_packets(char** symbolic_packets) {
-  cJSON *current_level = cJSON_Parse(workload_json);
-  int* workload_options,option_length;
-  option_length = get_workload_helper(current_level,&workload_options);
-  current_level = cJSON_Parse(json);
-  return get_packets_helper(current_level,symbolic_packets,workload_options,0,option_length-1);
-}
-
-// returns packet_length
-int get_packet(char** symbolic_packet) {
-  cJSON *current_level = cJSON_Parse(json);
-  char *packet_value = get_packet_helper(current_level);
-  int packet_length = strlen(packet_value);
-  *symbolic_packet = (char*) malloc(sizeof(char) * packet_length);
-  strcpy(*symbolic_packet, packet_value);
-  cJSON_Delete(current_level);
-  return packet_length;
-}
+const char *workload_json =  "{ \"options\":[\"read\",\"insert\",\"update\",\"write\"],\"read\":{\"options\": [\"range\",\"write\",\"only\",\"point\"],\"range\":[0,1],\"only\":[0],\"point\":[0,0]},\"insert\":[1],\"update\": {\"options\":[\"no_index\",\"index\"],\"no_index\":[2,0],\"index\": [2,1]},\"wrtie\":[2]}";
 
 /**
   Read one command from connection and execute it (query or simple command).
@@ -865,7 +701,7 @@ bool do_command(THD *thd)
 
   bool is_symbolic = false;
   static int count = -1;
-  static char* packets[MAX_QUERY_TYPE];
+  static char* packets[MAX_SYMBOLIC_REQUEST_TYPE];
   static int packets_length;
   int test;
   int flag;
@@ -956,12 +792,12 @@ bool do_command(THD *thd)
 
   flag = true;
   if (!strcmp(packet, "\003@@")) {
-    packet_length = get_packet(&packet);
+    packet_length = gen_one_symbolic_request_from_str(&packet, json);
     is_symbolic = true;
   }
 
   if(!strcmp(packet, "\003@@@-0")) {
-    packets_length = get_packets(packets);
+    packets_length = gen_multi_symbolic_requests_from_strs(packets, workload_json, json);
   }
 
   if(strstr(packet,"\003@@@")) {
