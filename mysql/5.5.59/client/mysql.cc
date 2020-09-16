@@ -98,7 +98,6 @@ extern "C" {
 #ifdef HAVE_VIOLET_S2E
 #include <s2e/s2e.h>
 #endif
-#include "cJSON.h"
 #include <stdio.h>
 #include <stdlib.h>
 

@@ -30,15 +30,15 @@ if(DEFINED ENV{S2EDIR})
 else()
   MESSAGE(WARNING "S2EDIR environment variable is not set, building MySQL without S2E.")
 endif()
+
 # Include Violet hook lib
-include_directories(../../hooks/lib)
-add_subdirectory(../../hooks violet)
-MESSAGE(STATUS "Violet library build path ${CMAKE_CURRENT_BINARY_DIR}/violet")
+
 SET(LIBVIOLET violet)
+SET(LIBVIOLET_SRC_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../../hooks)
+add_subdirectory(${LIBVIOLET_SRC_ROOT} violet)
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/violet/lib)
+MESSAGE(STATUS "Violet library build path ${CMAKE_CURRENT_BINARY_DIR}/violet")
 link_directories(${CMAKE_CURRENT_BINARY_DIR}/violet/lib)
-include_directories(../../third-party/cJSON)
-add_subdirectory(../../third-party/cJSON cJSON)
-link_directories(${CMAKE_CURRENT_BINARY_DIR}/cJSON)
 
 #SET(CMAKE_C_FLAGS "-O0 -fpermissive")
 #SET(CMAKE_CXX_FLAGS "-O0 -fpermissive")
