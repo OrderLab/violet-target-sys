@@ -865,6 +865,7 @@ with_libxslt
 with_system_tzdata
 with_zlib
 with_gnu_ld
+with_violet_lib
 enable_largefile
 enable_float4_byval
 enable_float8_byval
@@ -1567,6 +1568,7 @@ Optional Packages:
                           use system time zone data in DIR
   --without-zlib          do not use Zlib
   --with-gnu-ld           assume the C compiler uses GNU ld [default=no]
+  --with-violet-lib       specify the violet lib
 
 Some influential environment variables:
   CC          C compiler command
@@ -5150,9 +5152,26 @@ fi
 # Check whether they are supported, and add them to CFLAGS if so.
 # ICC pretends to be GCC but it's lying; it doesn't support these flags,
 # but has its own.  Also check other compiler-specific flags here.
+if test ${S2EDIR} = yes; then
+ echo "S2EDIR environment variable is not set, building MySQL without S2E."
+else
+ S2ESRC_INCLUDE="${S2EDIR}/source/s2e/guest/common/include"
+ S2E_VIOLET=-DHAVE_VIOLET_S2E
+fi
+
+if test "${with_violet_lib+set}" = set; then :
+  withval=$with_violet_lib;
+  mkdir -p src/violet
+  ln -sf $withval/Makefile src/violet/Makefile
+  cp -r $withval/lib src/violet/lib
+  cp -r $withval/config.h.in src/violet/violet_config.h
+  cp -r $withval/third-party src/violet/third-party
+
+fi
+
 
 if test "$GCC" = yes -a "$ICC" = no; then
-  CFLAGS="-Wall -Wmissing-prototypes -Wpointer-arith"
+  CFLAGS="-I${S2ESRC_INCLUDE}  $S2E_VIOLET -Wall -Wmissing-prototypes -Wpointer-arith"
   CXXFLAGS="-Wall -Wpointer-arith"
   # These work in some but not all gcc versions
 

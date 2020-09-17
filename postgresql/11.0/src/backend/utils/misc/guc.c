@@ -25,7 +25,7 @@
 #ifdef HAVE_SYSLOG
 #include <syslog.h>
 #endif
-
+#include "violet_sys.h"
 #include "access/commit_ts.h"
 #include "access/gin.h"
 #include "access/rmgr.h"
@@ -4803,6 +4803,111 @@ InitializeGUCOptionsFromEnvironment(void)
 	}
 }
 
+
+static void violet_make_options_symbolic()
+{
+//	char* temp = getenv("VIO_SYM_CONFIGS");
+//	if (temp != NULL) {
+//		strcpy(sym_config_targets,temp);
+//		violet_log("The sym_config_targets is %s\n",sym_config_targets);
+//		s2e_invoke_plugin("LatencyTracker",&sym_config_targets, sizeof(sym_config_targets));
+//	}
+	violet_log("The sym_config_targets is \n");
+//	if (sym_config_targets == NULL || strlen(sym_config_targets) == 0) {
+//		violet_log("VIO_SYM_CONFIGS environment variable is not set\n");
+//	} else {
+//		sym_config_targets_len = strlen(sym_config_targets);
+//		get_related_config();
+//		sym_config_targets_len = strlen(sym_config_targets);
+//		violet_log("finish checking the result configuration: %s\n", sym_config_targets);
+//		if (strcmp(sym_config_targets, "*") == 0) {
+//			sym_config_targets_all = true;  // wildcard match all configs
+//			violet_log("will make all configs symbolic; are you sure?\n");
+//		} else {
+//			violet_log("will make the following configs symbolic: %s\n", sym_config_targets);
+//		}
+//
+//		int total = 0, targets = 0;
+//
+//		for (int i = 0; i < num_guc_variables; i++)
+//		{
+//			total++;
+//			struct config_generic *gconf = guc_variables[i];
+//			if (is_config_in_targets(gconf->name)) {
+//				s2e_printf("config name %s",gconf->name);
+//				targets++;
+//				switch (gconf->vartype)
+//				{
+//					case PGC_BOOL:
+//					{
+//						struct config_bool *conf = (struct config_bool *) gconf;
+//						if(!is_blacklisted(gconf->name))
+//							my_s2e_make_symbolic(conf->variable,sizeof(bool),gconf->name);
+//						break;
+//					}
+//					case PGC_INT:
+//					{
+//						struct config_int *conf = (struct config_int *) gconf;
+//						if(!is_blacklisted(gconf->name)) {
+//							my_s2e_make_symbolic(conf->variable,sizeof(int),gconf->name);
+//							s2e_assume((*conf->variable) >= conf->min);
+//							s2e_assume((*conf->variable) <= conf->max);
+//						}
+//						break;
+//					}
+//					case PGC_REAL:
+//					{
+//						struct config_real *conf = (struct config_real *) gconf;
+//						if(!is_blacklisted(gconf->name)) {
+//							my_s2e_make_symbolic(conf->variable,sizeof(double),gconf->name);
+//							struct real_array *entry;
+//							for (entry = ConfigureRealArray; entry->name; entry++)
+//							{
+//								if(!strcmp(gconf->name,entry->name)) {
+//									check_double(conf->variable,entry->array,entry->length);
+//									s2e_concretize_all(conf->variable, sizeof(double));
+//								}
+//							}
+//						}
+//						break;
+//					}
+//					case PGC_STRING:
+//					{
+//						struct config_string *conf = (struct config_string *) gconf;
+//						int size = strlen((*conf->variable));
+//						if(!is_blacklisted(gconf->name)) {
+//							my_s2e_make_symbolic(conf->variable,sizeof(size),gconf->name);
+//						}
+//
+//						break;
+//					}
+//					case PGC_ENUM:
+//					{
+//						struct config_enum *conf = (struct config_enum *) gconf;
+//						if(!is_blacklisted(gconf->name)) {
+//							my_s2e_make_symbolic(conf->variable,sizeof(int),gconf->name);
+//							struct config_enum_entry *entry;
+//							int max_val = 0;
+//							int min_val = 0;
+//							for (entry = conf->options; entry->name; entry++)
+//							{
+//								if (entry->val > max_val)
+//									max_val = entry->val;
+//							}
+////            s2e_printf("config = %s, max val = %d", gconf->name,max_val);
+//							s2e_assume((*conf->variable) <= max_val);
+//							s2e_assume((*conf->variable) >= min_val);
+//						}
+//						break;
+//					}
+//				}
+//			}
+//		}
+//		violet_log("total %d system config variables, skipped for SE, %d target configs to make symbolic\n",
+//				   total, targets);
+//
+//	}
+}
 /*
  * Initialize one GUC option variable to its compiled-in default.
  *
@@ -4915,6 +5020,7 @@ InitializeOneGUCOption(struct config_generic *gconf)
 				break;
 			}
 	}
+	violet_make_options_symbolic();
 }
 
 

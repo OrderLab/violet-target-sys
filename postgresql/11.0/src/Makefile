@@ -13,6 +13,7 @@ top_builddir = ..
 include Makefile.global
 
 SUBDIRS = \
+  violet \
 	common \
 	port \
 	timezone \
@@ -29,7 +30,7 @@ SUBDIRS = \
 	makefiles \
 	test/regress \
 	test/isolation \
-	test/perl
+	test/perl 
 
 ifeq ($(with_llvm), yes)
 SUBDIRS += backend/jit/llvm
