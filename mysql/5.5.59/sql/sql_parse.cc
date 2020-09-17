@@ -703,7 +703,7 @@ bool do_command(THD *thd)
   static char* packets[MAX_SYMBOLIC_REQUEST_TYPE];
   static int packets_length;
   int test;
-  int flag;
+  int flag = false;
 
   /*
     indicator of uninitialized lex => normal flow of errors handling
@@ -787,7 +787,6 @@ bool do_command(THD *thd)
 
   command= (enum enum_server_command) (uchar) packet[0];
 
-  flag = true;
   if (!strcmp(packet, "\003@@")) {
     s2e_printf("Generating one symbolic request...\n");
     packet_length = gen_one_symbolic_request_from_str(&packet, json);
