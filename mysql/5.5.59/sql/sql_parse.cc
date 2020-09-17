@@ -700,13 +700,10 @@ bool do_command(THD *thd)
   DBUG_ENTER("do_command");
 
   bool is_symbolic = false;
-  static int count = -1;
   static char* packets[MAX_SYMBOLIC_REQUEST_TYPE];
   static int packets_length;
   int test;
   int flag;
-  clock_t start, end;
-  double total;
 
   /*
     indicator of uninitialized lex => normal flow of errors handling
@@ -792,11 +789,13 @@ bool do_command(THD *thd)
 
   flag = true;
   if (!strcmp(packet, "\003@@")) {
+    s2e_printf("Generating one symbolic request...\n");
     packet_length = gen_one_symbolic_request_from_str(&packet, json);
     is_symbolic = true;
   }
 
   if(!strcmp(packet, "\003@@@-0")) {
+    s2e_printf("Generating multiple symbolic requests...\n");
     packets_length = gen_multi_symbolic_requests_from_strs(packets, workload_json, json);
   }
 
